@@ -1,7 +1,7 @@
 import requests
 import json
 from datetime import datetime
-
+import re
 def check_timestamp(block_timestamp):
     # 转换Unix时间戳为datetime对象
     timestamp_date = datetime.utcfromtimestamp(block_timestamp)
@@ -12,6 +12,13 @@ def check_timestamp(block_timestamp):
     # 如果block_timestamp的日期在目标日期之前，返回Ture
     return timestamp_date < target_date
 
+def print_sorted_dict_by_value(input_dict):
+    sorted_items = sorted(input_dict.items(), key=lambda item: item[1], reverse=True)
+    print('-------------------')
+    print('address send amount')
+    for key, value in sorted_items:
+        print(f'{key}: {value}')
+    print('-------------------')
 def fetch_extrinsics(row=100, page=1, signed="signed"):
     url = "https://service.eks.centralityapp.com/cennznet-explorer-api/api/scan/extrinsics"
     headers = {
@@ -45,6 +52,7 @@ def fetch_extrinsics(row=100, page=1, signed="signed"):
 
 # Example usage:
 account_id_dict={}     
+sum_amount =0
 for i in range(9999):
     print(f'now i is {i}')
     for _ in range(5):
@@ -62,10 +70,16 @@ for i in range(9999):
         if check_timestamp(tx_time_data):
             break
         if tx_function == 'batchAll' and tx_call_module =='utility' and '5FPRzdibKdeVdXMSsHgywNL4zWJenkPcVXMrUVuTzdahdPNd' in tx_to_address:
-            account_id_dict[tx_account_id] = 1
-
+            # Regular expression pattern to match the "amount" and its value
+            pattern = r'"amount":(\d+)'
+            # Using the findall method to find all matches in the string
+            amount = round(int(re.findall(pattern, tx_to_address)[0])/10000,1)
+            account_id_dict[tx_account_id] = account_id_dict.get(tx_account_id, 0) + amount
+            sum_amount +=amount
     if check_timestamp(tx_time_data):
         break
+
+print_sorted_dict_by_value(account_id_dict)
 print('-----------------------')
-print(account_id_dict.keys())
+print(f'now burn CENNZ num: {sum_amount}')
 print(f'now participate address number is : {len(account_id_dict)}')
